@@ -1,0 +1,54 @@
+import requests
+from bs4 import BeautifulSoup
+import os
+
+# 1. URL de la page à scraper
+base_url = 'https://max.de.wilde.web.ulb.be/camille/'
+url = base_url  # Page d'index contenant les liens vers les PDF
+
+# 2. Chemin du dossier où les fichiers PDF seront sauvegardés
+save_path = r'C:\Users\tdeganck\Doc en local\Corpus\tac\data\TP1_PDF'
+
+# 3. Créer le dossier s'il n'existe pas déjà
+os.makedirs(save_path, exist_ok=True)
+
+# 4. Envoyer une requête HTTP pour obtenir le contenu de la page
+response = requests.get(url)
+
+# 5. Vérifier si la requête a été réussie
+if response.status_code == 200:
+    # 6. Parser le contenu HTML de la page
+    soup = BeautifulSoup(response.content, 'html.parser')
+    
+    # 7. Trouver tous les liens qui contiennent des fichiers PDF
+    pdf_links = soup.find_all('a', href=True)  # Trouve tous les liens
+
+    # 8. Filtrer les liens qui pointent vers des fichiers PDF avec un nom de type 'KB_JB230_...'
+    for link in pdf_links:
+        file_url = link['href']
+        
+        if file_url.endswith('.pdf') and file_url.startswith('KB_'):
+            # 9. Ajouter l'URL de base pour compléter le lien si nécessaire
+            if not file_url.startswith('http'):
+                file_url = base_url + file_url
+            
+            # 10. Télécharger le fichier PDF
+            pdf_response = requests.get(file_url)
+
+            # Vérifier si le téléchargement est réussi
+            if pdf_response.status_code == 200:
+                # 11. Extraire le nom du fichier PDF depuis l'URL
+                file_name = os.path.basename(file_url)
+                
+                # 12. Chemin complet pour sauvegarder le fichier PDF
+                file_path = os.path.join(save_path, file_name)
+
+                # 13. Sauvegarder le fichier localement
+                with open(file_path, 'wb') as pdf_file:
+                    pdf_file.write(pdf_response.content)
+                
+                print(f"Fichier PDF téléchargé : {file_name} dans {save_path}")
+            else:
+                print(f"Erreur lors du téléchargement du fichier : {file_url}")
+else:
+    print(f"Erreur : {response.status_code}")
